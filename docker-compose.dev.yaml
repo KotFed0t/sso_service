@@ -5,6 +5,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.dev
+    ports:
+      - "80:80"
     volumes:
       - .:/usr/src/app
 
