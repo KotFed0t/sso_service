@@ -8,10 +8,14 @@ import (
 )
 
 type Config struct {
-	Env        string `env:"ENV"`
-	LogLevel   string `env:"LOG_LEVEL"`
-	Postgres   Postgres
-	HttpServer HttpServer
+	Env           string `env:"ENV"`
+	LogLevel      string `env:"LOG_LEVEL"`
+	SessionSecret string `env:"SESSION_SECRET"`
+	Postgres      Postgres
+	HttpServer    HttpServer
+	Google        Google
+	Yandex        Yandex
+	AuthProviders []string `env:"AUTH_PROVIDERS"`
 }
 
 type Postgres struct {
@@ -32,6 +36,20 @@ type HttpServer struct {
 	Timeout         time.Duration `env:"HTTP_SERVER_TIMEOUT"`
 	IdleTimeout     time.Duration `env:"HTTP_SERVER_IDLE_TIMEOUT"`
 	ShutdownTimeout time.Duration `env:"HTTP_SERVER_SHUTDOWN_TIMEOUT"`
+}
+
+type Google struct {
+	ClientID     string `env:"GOOGLE_CLIENT_ID"`
+	ClientSecret string `env:"GOOGLE_CLIENT_SECRET"`
+	CallbackURL  string `env:"GOOGLE_OAUTH_CALLBACK_URL"`
+	UserInfoUrl  string `env:"GOOGLE_USER_INFO_URL"`
+}
+
+type Yandex struct {
+	ClientID     string `env:"YANDEX_CLIENT_ID"`
+	ClientSecret string `env:"YANDEX_CLIENT_SECRET"`
+	CallbackURL  string `env:"YANDEX_OAUTH_CALLBACK_URL"`
+	UserInfoUrl  string `env:"YANDEX_USER_INFO_URL"`
 }
 
 func MustLoad() *Config {

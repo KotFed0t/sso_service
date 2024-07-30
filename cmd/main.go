@@ -9,6 +9,7 @@ import (
 	"sso_service/data/db/postgres"
 	"sso_service/internal/httpserver"
 	"sso_service/internal/repository"
+	"sso_service/internal/service/oauthService"
 	"sso_service/internal/transport/http/v1/controllers"
 	"sso_service/internal/transport/http/v1/routes"
 	"syscall"
@@ -40,7 +41,9 @@ func main() {
 	postgresDb := postgres.MustInitPostgres(cfg)
 	_ = repository.NewPostgresRepo(postgresDb)
 
-	authController := controllers.NewAuthController()
+	oauthSrv := oauthService.NewOAuthService(cfg)
+
+	authController := controllers.NewAuthController(cfg, oauthSrv)
 
 	engine := gin.Default()
 	routes.SetupRoutes(engine, authController)
