@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"context"
 	"github.com/gin-gonic/gin"
 	"log/slog"
 	"net/http"
@@ -18,36 +19,63 @@ func NewAuthController(cfg *config.Config, oauthService serviceInterface.OAuthSe
 	return &AuthController{cfg: cfg, oauthService: oauthService}
 }
 
-func (c *AuthController) Test(ctx *gin.Context) {
-	ctx.JSON(http.StatusOK, gin.H{"msg": "hello world"})
+func (ctrl *AuthController) Test(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"msg": "hello world"})
 }
 
-func (c *AuthController) OauthLogin(ctx *gin.Context) {
-	authProvider := ctx.Param("provider")
-	if !slices.Contains(c.cfg.AuthProviders, authProvider) {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"msg": "invalid provider"})
+func (ctrl *AuthController) OauthLogin(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(context.Background(), ctrl.cfg.ApiTimeout)
+	defer cancel()
+
+	authProvider := c.Param("provider")
+	if !slices.Contains(ctrl.cfg.AuthProviders, authProvider) {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"msg": "invalid provider"})
 		return
 	}
-	url, err := c.oauthService.GetRedirectURL(ctx, authProvider)
+
+	url, state, err := ctrl.oauthService.GetRedirectURLAndState(ctx, authProvider)
+	c.SetCookie("oauthstate", state, 24*60*60, "/", "localhost", false, true)
 	if err != nil {
 		slog.Error("error in AuthController.OauthLogin", slog.Any("error", err))
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"msg": "something went wrong"})
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"msg": "something went wrong"})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"redirect_url": url})
+	c.JSON(http.StatusOK, gin.H{"redirect_url": url})
 }
 
-func (c *AuthController) OauthCallback(ctx *gin.Context) {
-	authProvider := ctx.Param("provider")
-	if !slices.Contains(c.cfg.AuthProviders, authProvider) {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"msg": "invalid provider"})
+func (ctrl *AuthController) OauthCallback(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(context.Background(), ctrl.cfg.ApiTimeout)
+	defer cancel()
+
+	oauthStateCookie, err := c.Cookie("oauthstate")
+	if err != nil {
+		slog.Error("failed on get oauthstate cookie", slog.Any("error", err))
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"msg": "oauthstate cookie doesn't exist"})
 		return
 	}
-	email, err := c.oauthService.OauthProviderCallback(ctx, authProvider)
+
+	if c.Query("state") != oauthStateCookie {
+		slog.Error("callback state does`t match oauthstate from cookie")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"msg": "callback state does`t match"})
+		return
+	}
+
+	authProvider := c.Param("provider")
+	if !slices.Contains(ctrl.cfg.AuthProviders, authProvider) {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"msg": "invalid provider"})
+		return
+	}
+
+	accessToke, refreshToken, err := ctrl.oauthService.HandleCallbackAndLoginUser(
+		ctx,
+		authProvider,
+		c.Query("code"),
+		c.ClientIP(),
+	)
 	if err != nil {
 		slog.Error("error in AuthController.OauthCallback", slog.Any("error", err))
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"msg": "something went wrong"})
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"msg": "something went wrong"})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"email": email})
+	c.JSON(http.StatusOK, gin.H{"access_token": accessToke, "refresh_token": refreshToken})
 }

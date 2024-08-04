@@ -28,6 +28,6 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
     id BIGSERIAL PRIMARY KEY,
     user_uuid UUID REFERENCES users(uuid) ON DELETE CASCADE,
     refresh_tokens TEXT[] DEFAULT '{}',
-    ip_addresses INET[] DEFAULT '{}',
+    ip_addresses TEXT[] DEFAULT '{}',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

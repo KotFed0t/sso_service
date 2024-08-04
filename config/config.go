@@ -8,14 +8,16 @@ import (
 )
 
 type Config struct {
-	Env           string `env:"ENV"`
-	LogLevel      string `env:"LOG_LEVEL"`
-	SessionSecret string `env:"SESSION_SECRET"`
+	Env           string        `env:"ENV"`
+	LogLevel      string        `env:"LOG_LEVEL"`
+	SessionSecret string        `env:"SESSION_SECRET"`
+	AuthProviders []string      `env:"AUTH_PROVIDERS"`
+	ApiTimeout    time.Duration `env:"API_TIMEOUT"`
 	Postgres      Postgres
 	HttpServer    HttpServer
 	Google        Google
 	Yandex        Yandex
-	AuthProviders []string `env:"AUTH_PROVIDERS"`
+	Jwt           Jwt
 }
 
 type Postgres struct {
@@ -50,6 +52,12 @@ type Yandex struct {
 	ClientSecret string `env:"YANDEX_CLIENT_SECRET"`
 	CallbackURL  string `env:"YANDEX_OAUTH_CALLBACK_URL"`
 	UserInfoUrl  string `env:"YANDEX_USER_INFO_URL"`
+}
+
+type Jwt struct {
+	SecretKey       string        `env:"JWT_SECRET_KEY"`
+	AccessTokenTtl  time.Duration `env:"JWT_ACCESS_TOKEN_TTL"`
+	RefreshTokenTtl time.Duration `env:"JWT_REFRESH_TOKEN_TTL"`
 }
 
 func MustLoad() *Config {

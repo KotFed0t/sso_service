@@ -39,9 +39,9 @@ func main() {
 	slog.Debug("config", slog.Any("cfg", cfg))
 
 	postgresDb := postgres.MustInitPostgres(cfg)
-	_ = repository.NewPostgresRepo(postgresDb)
+	postgresRepo := repository.NewPostgresRepo(postgresDb)
 
-	oauthSrv := oauthService.NewOAuthService(cfg)
+	oauthSrv := oauthService.NewOAuthService(cfg, postgresRepo)
 
 	authController := controllers.NewAuthController(cfg, oauthSrv)
 

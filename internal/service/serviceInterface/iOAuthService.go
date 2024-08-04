@@ -1,8 +1,10 @@
 package serviceInterface
 
-import "github.com/gin-gonic/gin"
+import (
+	"context"
+)
 
 type OAuthService interface {
-	GetRedirectURL(ctx *gin.Context, authProvider string) (string, error)
-	OauthProviderCallback(ctx *gin.Context, authProvider string) (string, error)
+	GetRedirectURLAndState(ctx context.Context, authProvider string) (url, state string, err error)
+	HandleCallbackAndLoginUser(ctx context.Context, authProviderName, callbackCode, clientIp string) (accessToken, refreshToken string, err error)
 }
