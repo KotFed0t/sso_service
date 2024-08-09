@@ -27,7 +27,7 @@ type OAuthService struct {
 	yandexConfig *oauth2.Config
 }
 
-func NewOAuthService(cfg *config.Config, repo repository.IRepository) *OAuthService {
+func New(cfg *config.Config, repo repository.IRepository) *OAuthService {
 	var googleConfig = &oauth2.Config{
 		RedirectURL:  cfg.Google.CallbackURL,
 		ClientID:     cfg.Google.ClientID,
@@ -217,7 +217,7 @@ func (s *OAuthService) saveRefreshTokenToDb(ctx context.Context, refreshToken, u
 	if exist {
 		err = s.repo.UpdateRefreshTokens(ctx, userUuid, refreshToken, clientIp)
 		if err != nil {
-			return fmt.Errorf("failed on CheckExistenceUserUuidInRefreshTokens: %w", err)
+			return fmt.Errorf("failed on UpdateRefreshTokens: %w", err)
 		}
 		return nil
 	}

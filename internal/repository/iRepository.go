@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"sso_service/internal/model"
+	"time"
 )
 
 type IRepository interface {
@@ -14,4 +15,6 @@ type IRepository interface {
 	CheckExistenceUserUuidInRefreshTokens(ctx context.Context, userUuid string) (bool, error)
 	InsertIntoRefreshTokens(ctx context.Context, userUuid, refreshToken, clientIp string) error
 	UpdateRefreshTokens(ctx context.Context, userUuid, refreshToken, clientIp string) error
+	CheckUserExists(ctx context.Context, email string) (bool, error)
+	SavePendingUser(ctx context.Context, email string, passwordHash string, code int, codeExpiresAt time.Time) error
 }

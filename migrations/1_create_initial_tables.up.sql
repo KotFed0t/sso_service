@@ -12,8 +12,8 @@ CREATE TABLE IF NOT EXISTS pending_users (
     id BIGSERIAL PRIMARY KEY,
     email VARCHAR(255) NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
-    token VARCHAR(255) NOT NULL,
-    token_expire_at TIMESTAMP NOT NULL,
+    code INTEGER NOT NULL,
+    code_expires_at TIMESTAMP NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

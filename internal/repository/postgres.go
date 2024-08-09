@@ -6,6 +6,7 @@ import (
 	"errors"
 	"github.com/jmoiron/sqlx"
 	"sso_service/internal/model"
+	"time"
 )
 
 type PostgresRepo struct {
@@ -94,6 +95,28 @@ func (r *PostgresRepo) UpdateRefreshTokens(ctx context.Context, userUuid, refres
 		    ip_addresses = array_append(ip_addresses, $2)
 		WHERE user_uuid = $3;`
 	_, err := r.db.ExecContext(ctx, query, refreshToken, clientIp, userUuid)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *PostgresRepo) CheckUserExists(ctx context.Context, email string) (bool, error) {
+	var exists bool
+	query := `SELECT EXISTS (SELECT 1 FROM users WHERE email = $1)`
+	err := r.db.QueryRowContext(ctx, query, email).Scan(&exists)
+	return exists, err
+}
+
+func (r *PostgresRepo) SavePendingUser(
+	ctx context.Context,
+	email string,
+	passwordHash string,
+	code int,
+	codeExpiresAt time.Time,
+) error {
+	query := `INSERT INTO pending_users (email, password_hash, code, code_expires_at) VALUES ($1, $2, $3, $4)`
+	_, err := r.db.ExecContext(ctx, query, email, passwordHash, code, codeExpiresAt)
 	if err != nil {
 		return err
 	}
