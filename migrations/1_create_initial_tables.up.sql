@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS users (
 
 CREATE TABLE IF NOT EXISTS pending_users (
     id BIGSERIAL PRIMARY KEY,
-    email VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     code INTEGER NOT NULL,
     code_expires_at TIMESTAMP NOT NULL,
@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS auth_providers (
 
 CREATE TABLE IF NOT EXISTS refresh_tokens (
     id BIGSERIAL PRIMARY KEY,
-    user_uuid UUID REFERENCES users(uuid) ON DELETE CASCADE,
+    user_uuid UUID REFERENCES users(uuid) ON DELETE CASCADE UNIQUE,
     refresh_tokens TEXT[] DEFAULT '{}',
     ip_addresses TEXT[] DEFAULT '{}',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

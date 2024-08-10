@@ -16,5 +16,8 @@ type IRepository interface {
 	InsertIntoRefreshTokens(ctx context.Context, userUuid, refreshToken, clientIp string) error
 	UpdateRefreshTokens(ctx context.Context, userUuid, refreshToken, clientIp string) error
 	CheckUserExists(ctx context.Context, email string) (bool, error)
-	SavePendingUser(ctx context.Context, email string, passwordHash string, code int, codeExpiresAt time.Time) error
+	UpsertPendingUser(ctx context.Context, email string, passwordHash string, code int, codeExpiresAt time.Time) error
+	GetPendingUser(ctx context.Context, email string) (user model.PendingUser, err error)
+	DeletePendingUser(ctx context.Context, email string) error
+	UpsertRefreshTokens(ctx context.Context, userUuid, refreshToken, clientIp string) error
 }

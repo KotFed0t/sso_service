@@ -13,6 +13,7 @@ func SetupRoutes(engine *gin.Engine, authController *controllers.AuthController)
 
 	// api/v1/auth/...
 	authGroup.POST("/register", authController.Register)
+	authGroup.POST("/confirm-email", authController.ConfirmEmail)
 
 	// api/v1/oauth/...
 	oauthGroup.GET("/:provider/login", authController.OauthLogin)

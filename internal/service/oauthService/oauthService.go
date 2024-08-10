@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/go-resty/resty/v2"
-	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"golang.org/x/oauth2/yandex"
@@ -17,7 +16,6 @@ import (
 	"sso_service/internal/model"
 	"sso_service/internal/repository"
 	"sso_service/internal/utils"
-	"time"
 )
 
 type OAuthService struct {
@@ -136,40 +134,45 @@ func (s *OAuthService) HandleCallbackAndLoginUser(
 		return "", "", fmt.Errorf("failed on getOrCreateUser: %w", err)
 	}
 
-	accessToken, refreshToken, err = s.generateAccessAndRefreshTokens(user.Uuid)
+	accessToken, refreshToken, err = utils.GenerateAccessAndRefreshTokens(
+		user.Uuid,
+		s.cfg.Jwt.AccessTokenTtl,
+		s.cfg.Jwt.RefreshTokenTtl,
+		s.cfg.Jwt.SecretKey,
+	)
 	if err != nil {
-		return "", "", fmt.Errorf("failed on generateAccessAndRefreshTokens: %w", err)
+		return "", "", fmt.Errorf("failed on GenerateAccessAndRefreshTokens: %w", err)
 	}
 
-	err = s.saveRefreshTokenToDb(ctx, refreshToken, user.Uuid, clientIp)
+	err = s.repo.UpsertRefreshTokens(ctx, user.Uuid, refreshToken, clientIp)
 	if err != nil {
-		return "", "", fmt.Errorf("failed on saveRefreshTokenToDb: %w", err)
+		return "", "", fmt.Errorf("failed on UpsertRefreshTokens: %w", err)
 	}
 
 	return accessToken, refreshToken, nil
 }
 
-func (s *OAuthService) generateAccessAndRefreshTokens(userUuid string) (accessToken, refreshToken string, err error) {
-	claims := jwt.MapClaims{
-		"sub": userUuid,
-		"exp": time.Now().Add(s.cfg.Jwt.AccessTokenTtl).Unix(),
-	}
-	accessToken, err = utils.GenerateJWT(s.cfg.Jwt.SecretKey, claims)
-	if err != nil {
-		return "", "", fmt.Errorf("failed on GenerateJWT accessToken: %w", err)
-	}
-
-	claims = jwt.MapClaims{
-		"sub": userUuid,
-		"exp": time.Now().Add(s.cfg.Jwt.RefreshTokenTtl).Unix(),
-	}
-	refreshToken, err = utils.GenerateJWT(s.cfg.Jwt.SecretKey, claims)
-	if err != nil {
-		return "", "", fmt.Errorf("failed on GenerateJWT accessToken: %w", err)
-	}
-
-	return accessToken, refreshToken, nil
-}
+//func (s *OAuthService) generateAccessAndRefreshTokens(userUuid string) (accessToken, refreshToken string, err error) {
+//	claims := jwt.MapClaims{
+//		"sub": userUuid,
+//		"exp": time.Now().Add(s.cfg.Jwt.AccessTokenTtl).Unix(),
+//	}
+//	accessToken, err = utils.GenerateJWT(s.cfg.Jwt.SecretKey, claims)
+//	if err != nil {
+//		return "", "", fmt.Errorf("failed on GenerateJWT accessToken: %w", err)
+//	}
+//
+//	claims = jwt.MapClaims{
+//		"sub": userUuid,
+//		"exp": time.Now().Add(s.cfg.Jwt.RefreshTokenTtl).Unix(),
+//	}
+//	refreshToken, err = utils.GenerateJWT(s.cfg.Jwt.SecretKey, claims)
+//	if err != nil {
+//		return "", "", fmt.Errorf("failed on GenerateJWT accessToken: %w", err)
+//	}
+//
+//	return accessToken, refreshToken, nil
+//}
 
 // getOrCreateUser создает пользователя и связку с auth provider если не было. Возвращает модель пользователя.
 func (s *OAuthService) getOrCreateUser(ctx context.Context, email, authProviderName string) (user model.User, err error) {
@@ -208,24 +211,24 @@ func (s *OAuthService) getOrCreateUser(ctx context.Context, email, authProviderN
 	return user, nil
 }
 
-func (s *OAuthService) saveRefreshTokenToDb(ctx context.Context, refreshToken, userUuid, clientIp string) error {
-	exist, err := s.repo.CheckExistenceUserUuidInRefreshTokens(ctx, userUuid)
-	if err != nil {
-		return fmt.Errorf("failed on CheckExistenceUserUuidInRefreshTokens: %w", err)
-	}
-
-	if exist {
-		err = s.repo.UpdateRefreshTokens(ctx, userUuid, refreshToken, clientIp)
-		if err != nil {
-			return fmt.Errorf("failed on UpdateRefreshTokens: %w", err)
-		}
-		return nil
-	}
-
-	err = s.repo.InsertIntoRefreshTokens(ctx, userUuid, refreshToken, clientIp)
-	if err != nil {
-		return fmt.Errorf("failed on InsertIntoRefreshTokens: %w", err)
-	}
-
-	return nil
-}
+//func (s *OAuthService) saveRefreshTokenToDb(ctx context.Context, refreshToken, userUuid, clientIp string) error {
+//	exist, err := s.repo.CheckExistenceUserUuidInRefreshTokens(ctx, userUuid)
+//	if err != nil {
+//		return fmt.Errorf("failed on CheckExistenceUserUuidInRefreshTokens: %w", err)
+//	}
+//
+//	if exist {
+//		err = s.repo.UpdateRefreshTokens(ctx, userUuid, refreshToken, clientIp)
+//		if err != nil {
+//			return fmt.Errorf("failed on UpdateRefreshTokens: %w", err)
+//		}
+//		return nil
+//	}
+//
+//	err = s.repo.InsertIntoRefreshTokens(ctx, userUuid, refreshToken, clientIp)
+//	if err != nil {
+//		return fmt.Errorf("failed on InsertIntoRefreshTokens: %w", err)
+//	}
+//
+//	return nil
+//}

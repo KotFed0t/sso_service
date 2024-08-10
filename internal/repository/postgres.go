@@ -108,15 +108,61 @@ func (r *PostgresRepo) CheckUserExists(ctx context.Context, email string) (bool,
 	return exists, err
 }
 
-func (r *PostgresRepo) SavePendingUser(
+func (r *PostgresRepo) UpsertPendingUser(
 	ctx context.Context,
 	email string,
 	passwordHash string,
 	code int,
 	codeExpiresAt time.Time,
 ) error {
-	query := `INSERT INTO pending_users (email, password_hash, code, code_expires_at) VALUES ($1, $2, $3, $4)`
+	query := `
+	INSERT INTO pending_users 
+    (email, password_hash, code, code_expires_at) 
+	VALUES ($1, $2, $3, $4) 
+	ON CONFLICT(email) DO UPDATE 
+	    set email=excluded.email,
+	    	password_hash=excluded.password_hash,
+	    	code=excluded.code,
+	    	code_expires_at=excluded.code_expires_at
+	`
 	_, err := r.db.ExecContext(ctx, query, email, passwordHash, code, codeExpiresAt)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *PostgresRepo) GetPendingUser(ctx context.Context, email string) (pendingUser model.PendingUser, err error) {
+	query := `SELECT email, password_hash, code, code_expires_at FROM pending_users WHERE email = $1;`
+	err = r.db.GetContext(ctx, &pendingUser, query, email)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return model.PendingUser{}, ErrNoRows
+		}
+		return model.PendingUser{}, err
+	}
+	return pendingUser, nil
+}
+
+func (r *PostgresRepo) DeletePendingUser(ctx context.Context, email string) error {
+	query := `DELETE FROM pending_users WHERE email = $1;`
+	_, err := r.db.ExecContext(ctx, query, email)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *PostgresRepo) UpsertRefreshTokens(ctx context.Context, userUuid, refreshToken, clientIp string) error {
+	query := `
+		INSERT INTO refresh_tokens (user_uuid, refresh_tokens, ip_addresses)
+		VALUES ($1, ARRAY[$2], ARRAY[$3])
+		ON CONFLICT (user_uuid)
+		DO UPDATE 
+		    SET refresh_tokens = array_cat(refresh_tokens.refresh_tokens, EXCLUDED.refresh_tokens),
+    			ip_addresses = array_cat(refresh_tokens.ip_addresses, EXCLUDED.ip_addresses);
+	`
+	_, err := r.db.ExecContext(ctx, query, userUuid, refreshToken, clientIp)
 	if err != nil {
 		return err
 	}
