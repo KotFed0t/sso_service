@@ -88,19 +88,6 @@ func (r *PostgresRepo) InsertIntoRefreshTokens(ctx context.Context, userUuid, re
 	return nil
 }
 
-func (r *PostgresRepo) UpdateRefreshTokens(ctx context.Context, userUuid, refreshToken, clientIp string) error {
-	query := `
-		UPDATE refresh_tokens 
-		SET refresh_tokens = array_append(refresh_tokens, $1),
-		    ip_addresses = array_append(ip_addresses, $2)
-		WHERE user_uuid = $3;`
-	_, err := r.db.ExecContext(ctx, query, refreshToken, clientIp, userUuid)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func (r *PostgresRepo) CheckUserExists(ctx context.Context, email string) (bool, error) {
 	var exists bool
 	query := `SELECT EXISTS (SELECT 1 FROM users WHERE email = $1)`
@@ -163,6 +150,32 @@ func (r *PostgresRepo) UpsertRefreshTokens(ctx context.Context, userUuid, refres
     			ip_addresses = array_cat(refresh_tokens.ip_addresses, EXCLUDED.ip_addresses);
 	`
 	_, err := r.db.ExecContext(ctx, query, userUuid, refreshToken, clientIp)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *PostgresRepo) CheckRefreshTokenExistence(ctx context.Context, userUuid, refreshToken, clientIp string) (bool, error) {
+	var exists bool
+	query := `SELECT EXISTS (
+		SELECT 1 FROM refresh_tokens 
+		         WHERE user_uuid = $1 
+		           AND $2 = ANY(refresh_tokens.refresh_tokens) 
+    			   AND $3 = ANY(refresh_tokens.ip_addresses)
+		         )`
+	err := r.db.QueryRowContext(ctx, query, userUuid, refreshToken, clientIp).Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+	return exists, nil
+}
+
+func (r *PostgresRepo) UpdateRefreshToken(ctx context.Context, userUuid, oldRefreshToken, newRefreshToken string) error {
+	query := `UPDATE refresh_tokens 
+		set refresh_tokens = array_replace(refresh_tokens.refresh_tokens, $2, $3) 
+		where user_uuid = $1;`
+	_, err := r.db.ExecContext(ctx, query, userUuid, oldRefreshToken, newRefreshToken)
 	if err != nil {
 		return err
 	}

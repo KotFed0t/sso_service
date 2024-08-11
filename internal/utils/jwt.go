@@ -41,3 +41,26 @@ func GenerateAccessAndRefreshTokens(
 
 	return accessToken, refreshToken, nil
 }
+
+func ValidateTokenAndGetUserUuid(tokenString string, secretKey string) (userUuid string, err error) {
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return []byte(secretKey), nil
+	})
+
+	if err != nil {
+		return "", fmt.Errorf("failed on jwt.Parse: %w", err)
+	}
+
+	if !token.Valid {
+		return "", fmt.Errorf("invalid token")
+	}
+
+	userUuid, err = token.Claims.GetSubject()
+	if err != nil {
+		return "", fmt.Errorf("failed on GetSubject from token: %w", err)
+	}
+	return userUuid, nil
+}

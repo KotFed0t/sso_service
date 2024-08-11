@@ -2,6 +2,7 @@ package authService
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"golang.org/x/crypto/bcrypt"
 	"math/rand"
@@ -58,8 +59,12 @@ func (s *AuthService) hashPassword(password string) (string, error) {
 	return string(hashedPassword), nil
 }
 
-func (s *AuthService) checkPasswordHash(password, hash string) error {
-	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+func (s *AuthService) checkPasswordHash(password, hash string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+	if err != nil {
+		return false
+	}
+	return true
 }
 
 func (s *AuthService) ConfirmEmailAndFinishRegistration(
@@ -107,4 +112,77 @@ func (s *AuthService) ConfirmEmailAndFinishRegistration(
 	}
 
 	return accessToken, refreshToken, nil
+}
+
+func (s *AuthService) LoginUser(ctx context.Context, email, password, clientIp string) (accessToken, refreshToken string, err error) {
+	user, err := s.repo.GetUserByEmail(ctx, email)
+	if err != nil {
+		if errors.Is(err, repository.ErrNoRows) {
+			return "", "", service.ErrWrongEmailOrPassword
+		}
+		return "", "", fmt.Errorf("failed on GetUserByEmail: %w", err)
+	}
+
+	if !user.PasswordHash.Valid {
+		return "", "", service.ErrWrongEmailOrPassword
+	}
+
+	if !s.checkPasswordHash(password, user.PasswordHash.String) {
+		return "", "", service.ErrWrongEmailOrPassword
+	}
+
+	accessToken, refreshToken, err = utils.GenerateAccessAndRefreshTokens(
+		user.Uuid,
+		s.cfg.Jwt.AccessTokenTtl,
+		s.cfg.Jwt.RefreshTokenTtl,
+		s.cfg.Jwt.SecretKey,
+	)
+	if err != nil {
+		return "", "", fmt.Errorf("failed on GenerateAccessAndRefreshTokens: %w", err)
+	}
+
+	err = s.repo.UpsertRefreshTokens(ctx, user.Uuid, refreshToken, clientIp)
+	if err != nil {
+		return "", "", fmt.Errorf("failed on UpsertRefreshTokens: %w", err)
+	}
+
+	return accessToken, refreshToken, nil
+}
+
+func (s *AuthService) RefreshTokens(ctx context.Context, refreshToken, clientIp string) (newAccessToken, newRefreshToken string, err error) {
+	// расшифровываем токен
+	userUuid, err := utils.ValidateTokenAndGetUserUuid(refreshToken, s.cfg.Jwt.SecretKey)
+	if err != nil {
+		return "", "", service.ErrInvalidRefreshToken
+	}
+
+	// берем uuid и идем в таблицу refresh_tokens
+	exists, err := s.repo.CheckRefreshTokenExistence(ctx, userUuid, refreshToken, clientIp)
+	if err != nil {
+		return "", "", err
+	}
+
+	if !exists {
+		return "", "", service.ErrInvalidRefreshToken
+	}
+
+	newAccessToken, newRefreshToken, err = utils.GenerateAccessAndRefreshTokens(
+		userUuid,
+		s.cfg.Jwt.AccessTokenTtl,
+		s.cfg.Jwt.RefreshTokenTtl,
+		s.cfg.Jwt.SecretKey,
+	)
+	if err != nil {
+		return "", "", fmt.Errorf("failed on GenerateAccessAndRefreshTokens: %w", err)
+	}
+
+	err = s.repo.UpdateRefreshToken(ctx, userUuid, refreshToken, newRefreshToken)
+	if err != nil {
+		return "", "", err
+	}
+
+	return newAccessToken, newRefreshToken, nil
+	// проверяем токен в списке и ip в списке
+	// создаем новые токены
+	// заменяем старый рефреш токен в БД на новый
 }

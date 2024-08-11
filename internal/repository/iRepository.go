@@ -14,10 +14,11 @@ type IRepository interface {
 	AddUserAuthProvider(ctx context.Context, userUuid, providerName string) error
 	CheckExistenceUserUuidInRefreshTokens(ctx context.Context, userUuid string) (bool, error)
 	InsertIntoRefreshTokens(ctx context.Context, userUuid, refreshToken, clientIp string) error
-	UpdateRefreshTokens(ctx context.Context, userUuid, refreshToken, clientIp string) error
 	CheckUserExists(ctx context.Context, email string) (bool, error)
 	UpsertPendingUser(ctx context.Context, email string, passwordHash string, code int, codeExpiresAt time.Time) error
 	GetPendingUser(ctx context.Context, email string) (user model.PendingUser, err error)
 	DeletePendingUser(ctx context.Context, email string) error
 	UpsertRefreshTokens(ctx context.Context, userUuid, refreshToken, clientIp string) error
+	CheckRefreshTokenExistence(ctx context.Context, userUuid, refreshToken, clientIp string) (bool, error)
+	UpdateRefreshToken(ctx context.Context, userUuid, oldRefreshToken, newRefreshToken string) error
 }

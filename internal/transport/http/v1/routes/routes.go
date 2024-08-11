@@ -13,7 +13,9 @@ func SetupRoutes(engine *gin.Engine, authController *controllers.AuthController)
 
 	// api/v1/auth/...
 	authGroup.POST("/register", authController.Register)
+	authGroup.POST("/login", authController.Login)
 	authGroup.POST("/confirm-email", authController.ConfirmEmail)
+	authGroup.GET("/refresh", authController.RefreshTokens)
 
 	// api/v1/oauth/...
 	oauthGroup.GET("/:provider/login", authController.OauthLogin)
