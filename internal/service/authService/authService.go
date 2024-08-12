@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"golang.org/x/crypto/bcrypt"
+	"log/slog"
 	"math/rand"
 	"sso_service/config"
 	"sso_service/internal/repository"
@@ -150,13 +151,11 @@ func (s *AuthService) LoginUser(ctx context.Context, email, password, clientIp s
 }
 
 func (s *AuthService) RefreshTokens(ctx context.Context, refreshToken, clientIp string) (newAccessToken, newRefreshToken string, err error) {
-	// расшифровываем токен
 	userUuid, err := utils.ValidateTokenAndGetUserUuid(refreshToken, s.cfg.Jwt.SecretKey)
 	if err != nil {
 		return "", "", service.ErrInvalidRefreshToken
 	}
 
-	// берем uuid и идем в таблицу refresh_tokens
 	exists, err := s.repo.CheckRefreshTokenExistence(ctx, userUuid, refreshToken, clientIp)
 	if err != nil {
 		return "", "", err
@@ -178,11 +177,42 @@ func (s *AuthService) RefreshTokens(ctx context.Context, refreshToken, clientIp 
 
 	err = s.repo.UpdateRefreshToken(ctx, userUuid, refreshToken, newRefreshToken)
 	if err != nil {
-		return "", "", err
+		return "", "", fmt.Errorf("failed on UpdateRefreshToken: %w", err)
 	}
 
 	return newAccessToken, newRefreshToken, nil
-	// проверяем токен в списке и ip в списке
-	// создаем новые токены
-	// заменяем старый рефреш токен в БД на новый
+}
+
+func (s *AuthService) SendResetPasswordLink(ctx context.Context, email string) error {
+	// найти юзера по email, если нет - вернуть nil а не ошибку, чтобы не раскрывать суть
+	user, err := s.repo.GetUserByEmail(ctx, email)
+	if err != nil {
+		if errors.Is(err, repository.ErrNoRows) {
+			// если email нет - не раскрываем инфо об этом клиенту
+			return nil
+		}
+		return fmt.Errorf("failed on GetUserByEmail: %w", err)
+	}
+
+	token := s.getRandomTokenString(64)
+	tokenHash, err := s.hashPassword(token)
+	err = s.repo.UpsertPasswordResetToken(ctx, user.Uuid, tokenHash, time.Now().Add(15*time.Minute))
+	if err != nil {
+		return fmt.Errorf("failed on UpsertPasswordResetToken: %w", err)
+	}
+
+	resetPasswordUrl := fmt.Sprintf("%s?token=%s&email=%s", s.cfg.ResetPasswordUrl, token, user.Email)
+	slog.Info("", "resetPasswordUrl", resetPasswordUrl)
+	return nil
+	// TODO отправить email клиенту со ссылкой
+}
+
+func (s *AuthService) getRandomTokenString(length int) string {
+	const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	b := make([]byte, length)
+	for i := range b {
+		b[i] = letters[rand.Intn(len(letters))]
+	}
+	return string(b)
+
 }

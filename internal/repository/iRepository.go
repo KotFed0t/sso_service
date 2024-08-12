@@ -21,4 +21,5 @@ type IRepository interface {
 	UpsertRefreshTokens(ctx context.Context, userUuid, refreshToken, clientIp string) error
 	CheckRefreshTokenExistence(ctx context.Context, userUuid, refreshToken, clientIp string) (bool, error)
 	UpdateRefreshToken(ctx context.Context, userUuid, oldRefreshToken, newRefreshToken string) error
+	UpsertPasswordResetToken(ctx context.Context, userUuid string, tokenHash string, expiresAt time.Time) error
 }

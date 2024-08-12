@@ -181,3 +181,25 @@ func (r *PostgresRepo) UpdateRefreshToken(ctx context.Context, userUuid, oldRefr
 	}
 	return nil
 }
+
+func (r *PostgresRepo) UpsertPasswordResetToken(
+	ctx context.Context,
+	userUuid string,
+	tokenHash string,
+	expiresAt time.Time,
+) error {
+	query := `
+		INSERT INTO password_reset_tokens (user_uuid, token_hash, expires_at)
+		VALUES ($1, $2, $3)
+		ON CONFLICT (user_uuid)
+		DO UPDATE 
+		    SET user_uuid = excluded.user_uuid,
+    			token_hash = excluded.token_hash,
+    			expires_at = excluded.expires_at;
+	`
+	_, err := r.db.ExecContext(ctx, query, userUuid, tokenHash, expiresAt)
+	if err != nil {
+		return err
+	}
+	return nil
+}

@@ -8,16 +8,16 @@ import (
 )
 
 type Config struct {
-	Env           string        `env:"ENV"`
-	LogLevel      string        `env:"LOG_LEVEL"`
-	SessionSecret string        `env:"SESSION_SECRET"`
-	AuthProviders []string      `env:"AUTH_PROVIDERS"`
-	ApiTimeout    time.Duration `env:"API_TIMEOUT"`
-	Postgres      Postgres
-	HttpServer    HttpServer
-	Google        Google
-	Yandex        Yandex
-	Jwt           Jwt
+	Env              string        `env:"ENV"`
+	LogLevel         string        `env:"LOG_LEVEL"`
+	AuthProviders    []string      `env:"AUTH_PROVIDERS"`
+	ApiTimeout       time.Duration `env:"API_TIMEOUT"`
+	ResetPasswordUrl string        `env:"RESET_PASSWORD_URL"`
+	Postgres         Postgres
+	HttpServer       HttpServer
+	Google           Google
+	Yandex           Yandex
+	Jwt              Jwt
 }
 
 type Postgres struct {

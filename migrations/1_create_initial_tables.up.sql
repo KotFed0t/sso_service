@@ -31,3 +31,11 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
     ip_addresses TEXT[] DEFAULT '{}',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+    id BIGSERIAL PRIMARY KEY,
+    user_uuid UUID REFERENCES users(uuid) ON DELETE CASCADE UNIQUE,
+    token_hash VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP NOT NULL
+);

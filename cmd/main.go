@@ -47,7 +47,7 @@ func main() {
 	authController := controllers.NewAuthController(cfg, oauthSrv, authStv)
 
 	engine := gin.Default()
-	routes.SetupRoutes(engine, authController)
+	routes.SetupRoutes(engine, cfg, authController)
 	httpServer := httpserver.New(engine, cfg)
 
 	// Waiting interruption signal
