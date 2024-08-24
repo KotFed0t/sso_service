@@ -144,9 +144,9 @@ func (s *OAuthService) HandleCallbackAndLoginUser(
 		return "", "", fmt.Errorf("failed on GenerateAccessAndRefreshTokens: %w", err)
 	}
 
-	err = s.repo.UpsertRefreshTokens(ctx, user.Uuid, refreshToken, clientIp)
+	err = s.repo.InsertRefreshToken(ctx, user.Uuid, refreshToken, clientIp)
 	if err != nil {
-		return "", "", fmt.Errorf("failed on UpsertRefreshTokens: %w", err)
+		return "", "", fmt.Errorf("failed on InsertRefreshToken: %w", err)
 	}
 
 	return accessToken, refreshToken, nil

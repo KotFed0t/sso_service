@@ -26,16 +26,16 @@ CREATE TABLE IF NOT EXISTS auth_providers (
 
 CREATE TABLE IF NOT EXISTS refresh_tokens (
     id BIGSERIAL PRIMARY KEY,
-    user_uuid UUID REFERENCES users(uuid) ON DELETE CASCADE UNIQUE,
-    refresh_tokens TEXT[] DEFAULT '{}',
-    ip_addresses TEXT[] DEFAULT '{}',
+    user_uuid UUID REFERENCES users(uuid) ON DELETE CASCADE,
+    refresh_token TEXT NOT NULL,
+    ip_address VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS password_reset_tokens (
     id BIGSERIAL PRIMARY KEY,
     user_uuid UUID REFERENCES users(uuid) ON DELETE CASCADE UNIQUE,
-    token_hash VARCHAR(255) NOT NULL,
+    token VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     expires_at TIMESTAMP NOT NULL
 );

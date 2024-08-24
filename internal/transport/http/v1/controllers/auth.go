@@ -83,7 +83,7 @@ func (ctrl *AuthController) OauthCallback(c *gin.Context) {
 		return
 	}
 
-	c.SetCookie("oauthstate", "", 0, "/", "", false, true)
+	c.SetCookie("oauthstate", "", -1, "/", "", false, true)
 	c.SetCookie("refreshToken", refreshToken, 30*24*60*60, "/", "", false, true)
 	c.JSON(http.StatusOK, gin.H{"access_token": accessToken, "refresh_token": refreshToken})
 }
@@ -153,7 +153,7 @@ func (ctrl *AuthController) ConfirmEmail(c *gin.Context) {
 		return
 	}
 
-	c.SetCookie("email", "", 0, "/", "", false, true)
+	c.SetCookie("email", "", -1, "/", "", false, true)
 	c.SetCookie("refreshToken", refreshToken, 30*24*60*60, "/", "", false, true)
 	c.JSON(http.StatusOK, gin.H{"access_token": accessToken, "refresh_token": refreshToken})
 }
@@ -236,6 +236,51 @@ func (ctrl *AuthController) SendResetPasswordLink(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"msg": "ok"})
 }
 
-func (ctrl *AuthController) ResetPassword(c *gin.Context) {}
+func (ctrl *AuthController) ResetPassword(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(context.Background(), ctrl.cfg.ApiTimeout)
+	defer cancel()
 
-func (ctrl *AuthController) Logout(c *gin.Context) {}
+	var request model.ResetPasswordConfirmation
+	err := c.ShouldBindJSON(&request)
+	if err != nil {
+		if errMessages, ok := utils.GetErrorsFromRequestValidation(err); ok {
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "validation error", "details": errMessages})
+			return
+		}
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "bad request"})
+		return
+	}
+
+	err = ctrl.authService.ResetPassword(ctx, request.Uuid, request.Token, request.Password)
+	if err != nil {
+		if errors.Is(err, service.ErrResetPasswordNotValidOrExpired) {
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid data or expired token"})
+			return
+		}
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "something went wrong"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"msg": "ok"})
+}
+
+func (ctrl *AuthController) Logout(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(context.Background(), ctrl.cfg.ApiTimeout)
+	defer cancel()
+
+	refreshToken, err := c.Cookie("refreshToken")
+	if err != nil {
+		slog.Error("error in AuthController.Logout on getting cookie refreshToken", slog.Any("error", err))
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "something went wrong"})
+		return
+	}
+
+	err = ctrl.authService.Logout(ctx, refreshToken)
+	if err != nil {
+		slog.Error("error in AuthController.Logout on authService.Logout", slog.Any("error", err))
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "something went wrong"})
+		return
+	}
+
+	c.SetCookie("refreshToken", "", -1, "/", "", false, true)
+	c.JSON(http.StatusOK, gin.H{"msg": "ok"})
+}

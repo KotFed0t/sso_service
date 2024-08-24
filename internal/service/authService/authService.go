@@ -107,9 +107,9 @@ func (s *AuthService) ConfirmEmailAndFinishRegistration(
 		return "", "", fmt.Errorf("failed on GenerateAccessAndRefreshTokens: %w", err)
 	}
 
-	err = s.repo.UpsertRefreshTokens(ctx, userUuid, refreshToken, clientIp)
+	err = s.repo.InsertRefreshToken(ctx, userUuid, refreshToken, clientIp)
 	if err != nil {
-		return "", "", fmt.Errorf("failed on UpsertRefreshTokens: %w", err)
+		return "", "", fmt.Errorf("failed on InsertRefreshToken: %w", err)
 	}
 
 	return accessToken, refreshToken, nil
@@ -142,9 +142,9 @@ func (s *AuthService) LoginUser(ctx context.Context, email, password, clientIp s
 		return "", "", fmt.Errorf("failed on GenerateAccessAndRefreshTokens: %w", err)
 	}
 
-	err = s.repo.UpsertRefreshTokens(ctx, user.Uuid, refreshToken, clientIp)
+	err = s.repo.InsertRefreshToken(ctx, user.Uuid, refreshToken, clientIp)
 	if err != nil {
-		return "", "", fmt.Errorf("failed on UpsertRefreshTokens: %w", err)
+		return "", "", fmt.Errorf("failed on InsertRefreshToken: %w", err)
 	}
 
 	return accessToken, refreshToken, nil
@@ -195,13 +195,12 @@ func (s *AuthService) SendResetPasswordLink(ctx context.Context, email string) e
 	}
 
 	token := s.getRandomTokenString(64)
-	tokenHash, err := s.hashPassword(token)
-	err = s.repo.UpsertPasswordResetToken(ctx, user.Uuid, tokenHash, time.Now().Add(15*time.Minute))
+	err = s.repo.UpsertPasswordResetToken(ctx, user.Uuid, token, time.Now().Add(15*time.Minute))
 	if err != nil {
 		return fmt.Errorf("failed on UpsertPasswordResetToken: %w", err)
 	}
 
-	resetPasswordUrl := fmt.Sprintf("%s?token=%s&email=%s", s.cfg.ResetPasswordUrl, token, user.Email)
+	resetPasswordUrl := fmt.Sprintf("%s?token=%s&uuid=%s", s.cfg.ResetPasswordUrl, token, user.Uuid)
 	slog.Info("", "resetPasswordUrl", resetPasswordUrl)
 	return nil
 	// TODO отправить email клиенту со ссылкой
@@ -215,4 +214,40 @@ func (s *AuthService) getRandomTokenString(length int) string {
 	}
 	return string(b)
 
+}
+
+func (s *AuthService) ResetPassword(ctx context.Context, uuid, token, password string) error {
+	exists, err := s.repo.CheckResetPasswordTokenAndUuidExistence(ctx, uuid, token)
+	if err != nil {
+		return fmt.Errorf("failed on CheckResetPasswordTokenAndUuidExistence: %w", err)
+	}
+
+	if !exists {
+		return service.ErrResetPasswordNotValidOrExpired
+	}
+
+	passwordHash, err := s.hashPassword(password)
+	if err != nil {
+		return fmt.Errorf("failed on hashPassword: %w", err)
+	}
+
+	err = s.repo.UpdateUserPassword(ctx, uuid, passwordHash)
+	if err != nil {
+		return fmt.Errorf("failed on UpdateUserPassword: %w", err)
+	}
+
+	err = s.repo.DeleteUuidFromPasswordReset(ctx, uuid)
+	if err != nil {
+		return fmt.Errorf("failed on UpdateUserPassword: %w", err)
+	}
+
+	return nil
+}
+
+func (s *AuthService) Logout(ctx context.Context, refreshToken string) error {
+	err := s.repo.DeleteRefreshToken(ctx, refreshToken)
+	if err != nil {
+		return fmt.Errorf("failed on DeleteRefreshToken: %w", err)
+	}
+	return nil
 }

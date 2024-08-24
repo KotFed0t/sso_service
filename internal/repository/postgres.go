@@ -79,19 +79,10 @@ func (r *PostgresRepo) CheckExistenceUserUuidInRefreshTokens(ctx context.Context
 	return true, nil
 }
 
-func (r *PostgresRepo) InsertIntoRefreshTokens(ctx context.Context, userUuid, refreshToken, clientIp string) error {
-	query := `INSERT INTO refresh_tokens (user_uuid, refresh_tokens, ip_addresses) VALUES ($1, ARRAY[$2], ARRAY[$3]);`
-	_, err := r.db.ExecContext(ctx, query, userUuid, refreshToken, clientIp)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func (r *PostgresRepo) CheckUserExists(ctx context.Context, email string) (bool, error) {
 	var exists bool
 	query := `SELECT EXISTS (SELECT 1 FROM users WHERE email = $1)`
-	err := r.db.QueryRowContext(ctx, query, email).Scan(&exists)
+	err := r.db.QueryRowxContext(ctx, query, email).Scan(&exists)
 	return exists, err
 }
 
@@ -140,15 +131,8 @@ func (r *PostgresRepo) DeletePendingUser(ctx context.Context, email string) erro
 	return nil
 }
 
-func (r *PostgresRepo) UpsertRefreshTokens(ctx context.Context, userUuid, refreshToken, clientIp string) error {
-	query := `
-		INSERT INTO refresh_tokens (user_uuid, refresh_tokens, ip_addresses)
-		VALUES ($1, ARRAY[$2], ARRAY[$3])
-		ON CONFLICT (user_uuid)
-		DO UPDATE 
-		    SET refresh_tokens = array_cat(refresh_tokens.refresh_tokens, EXCLUDED.refresh_tokens),
-    			ip_addresses = array_cat(refresh_tokens.ip_addresses, EXCLUDED.ip_addresses);
-	`
+func (r *PostgresRepo) InsertRefreshToken(ctx context.Context, userUuid, refreshToken, clientIp string) error {
+	query := `INSERT INTO refresh_tokens (user_uuid, refresh_token, ip_address) VALUES ($1, $2, $3);`
 	_, err := r.db.ExecContext(ctx, query, userUuid, refreshToken, clientIp)
 	if err != nil {
 		return err
@@ -158,13 +142,14 @@ func (r *PostgresRepo) UpsertRefreshTokens(ctx context.Context, userUuid, refres
 
 func (r *PostgresRepo) CheckRefreshTokenExistence(ctx context.Context, userUuid, refreshToken, clientIp string) (bool, error) {
 	var exists bool
-	query := `SELECT EXISTS (
-		SELECT 1 FROM refresh_tokens 
-		         WHERE user_uuid = $1 
-		           AND $2 = ANY(refresh_tokens.refresh_tokens) 
-    			   AND $3 = ANY(refresh_tokens.ip_addresses)
-		         )`
-	err := r.db.QueryRowContext(ctx, query, userUuid, refreshToken, clientIp).Scan(&exists)
+	query := `
+		SELECT EXISTS (
+			SELECT 1 FROM refresh_tokens 
+		    	WHERE user_uuid = $1 
+		           AND refresh_token = $2
+    			   AND ip_address = $3
+		)`
+	err := r.db.QueryRowxContext(ctx, query, userUuid, refreshToken, clientIp).Scan(&exists)
 	if err != nil {
 		return false, err
 	}
@@ -172,10 +157,15 @@ func (r *PostgresRepo) CheckRefreshTokenExistence(ctx context.Context, userUuid,
 }
 
 func (r *PostgresRepo) UpdateRefreshToken(ctx context.Context, userUuid, oldRefreshToken, newRefreshToken string) error {
-	query := `UPDATE refresh_tokens 
-		set refresh_tokens = array_replace(refresh_tokens.refresh_tokens, $2, $3) 
-		where user_uuid = $1;`
-	_, err := r.db.ExecContext(ctx, query, userUuid, oldRefreshToken, newRefreshToken)
+	query := `
+		UPDATE refresh_tokens 
+		set 
+		    refresh_token = $1,
+		    created_at = now()
+		where user_uuid = $2
+			and refresh_token = $3
+		`
+	_, err := r.db.ExecContext(ctx, query, newRefreshToken, userUuid, oldRefreshToken)
 	if err != nil {
 		return err
 	}
@@ -185,19 +175,66 @@ func (r *PostgresRepo) UpdateRefreshToken(ctx context.Context, userUuid, oldRefr
 func (r *PostgresRepo) UpsertPasswordResetToken(
 	ctx context.Context,
 	userUuid string,
-	tokenHash string,
+	token string,
 	expiresAt time.Time,
 ) error {
 	query := `
-		INSERT INTO password_reset_tokens (user_uuid, token_hash, expires_at)
+		INSERT INTO password_reset_tokens (user_uuid, token, expires_at)
 		VALUES ($1, $2, $3)
 		ON CONFLICT (user_uuid)
 		DO UPDATE 
 		    SET user_uuid = excluded.user_uuid,
-    			token_hash = excluded.token_hash,
+    			token = excluded.token,
     			expires_at = excluded.expires_at;
 	`
-	_, err := r.db.ExecContext(ctx, query, userUuid, tokenHash, expiresAt)
+	_, err := r.db.ExecContext(ctx, query, userUuid, token, expiresAt)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *PostgresRepo) CheckResetPasswordTokenAndUuidExistence(ctx context.Context, uuid, token string) (bool, error) {
+	var exists bool
+	query := `
+		SELECT EXISTS (
+			SELECT 1 FROM password_reset_tokens 
+		         WHERE user_uuid = $1 
+		           and token = $2 
+		           and expires_at > now()
+		);
+	`
+	err := r.db.QueryRowxContext(ctx, query, uuid, token).Scan(&exists)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, nil
+		}
+		return false, err
+	}
+	return exists, nil
+}
+
+func (r *PostgresRepo) UpdateUserPassword(ctx context.Context, uuid, passwordHash string) error {
+	query := `UPDATE users SET password_hash = $1 WHERE uuid = $2;`
+	_, err := r.db.ExecContext(ctx, query, passwordHash, uuid)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *PostgresRepo) DeleteUuidFromPasswordReset(ctx context.Context, uuid string) error {
+	query := `DELETE FROM password_reset_tokens WHERE user_uuid = $1;`
+	_, err := r.db.ExecContext(ctx, query, uuid)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *PostgresRepo) DeleteRefreshToken(ctx context.Context, refreshToken string) error {
+	query := `DELETE FROM refresh_tokens WHERE refresh_token = $1;`
+	_, err := r.db.ExecContext(ctx, query, refreshToken)
 	if err != nil {
 		return err
 	}
