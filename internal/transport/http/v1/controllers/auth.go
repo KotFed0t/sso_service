@@ -16,11 +16,11 @@ import (
 
 type AuthController struct {
 	cfg          *config.Config
-	oauthService serviceInterface.OAuthService
-	authService  serviceInterface.AuthService
+	oauthService serviceInterface.IOAuthService
+	authService  serviceInterface.IAuthService
 }
 
-func NewAuthController(cfg *config.Config, oauthService serviceInterface.OAuthService, authService serviceInterface.AuthService) *AuthController {
+func NewAuthController(cfg *config.Config, oauthService serviceInterface.IOAuthService, authService serviceInterface.IAuthService) *AuthController {
 	return &AuthController{cfg: cfg, oauthService: oauthService, authService: authService}
 }
 
@@ -61,7 +61,7 @@ func (ctrl *AuthController) OauthCallback(c *gin.Context) {
 
 	if c.Query("state") != oauthStateCookie {
 		slog.Error("callback state does`t match oauthstate from cookie")
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "callback state does`t match"})
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "callback state doesn't match"})
 		return
 	}
 

@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"sso_service/config"
 	"sso_service/data/db/postgres"
+	"sso_service/internal/externalApi/oauthClient"
 	"sso_service/internal/httpserver"
 	"sso_service/internal/repository"
 	"sso_service/internal/service/authService"
@@ -42,9 +43,9 @@ func main() {
 	postgresDb := postgres.MustInitPostgres(cfg)
 	postgresRepo := repository.NewPostgresRepo(postgresDb)
 
-	oauthSrv := oauthService.New(cfg, postgresRepo)
-	authStv := authService.New(cfg, postgresRepo)
-	authController := controllers.NewAuthController(cfg, oauthSrv, authStv)
+	oauthSrv := oauthService.New(cfg, postgresRepo, &oauthClient.OauthClient{})
+	authSrv := authService.New(cfg, postgresRepo)
+	authController := controllers.NewAuthController(cfg, oauthSrv, authSrv)
 
 	engine := gin.Default()
 	routes.SetupRoutes(engine, cfg, authController)

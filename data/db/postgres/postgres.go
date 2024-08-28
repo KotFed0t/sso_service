@@ -34,7 +34,7 @@ func MustInitPostgres(c *config.Config) *sqlx.DB {
 			break
 		}
 
-		slog.Info("Postgres is trying to connect, attempts left: %d", connAttempts)
+		slog.Info("Postgres is trying to connect", " attempts left", connAttempts)
 
 		time.Sleep(connTimeout)
 

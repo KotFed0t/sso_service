@@ -7,12 +7,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/go-resty/resty/v2"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"golang.org/x/oauth2/yandex"
 	"slices"
 	"sso_service/config"
+	"sso_service/internal/externalApi/apiInterface"
 	"sso_service/internal/model"
 	"sso_service/internal/repository"
 	"sso_service/internal/utils"
@@ -21,11 +21,12 @@ import (
 type OAuthService struct {
 	cfg          *config.Config
 	repo         repository.IRepository
+	oauthClient  apiInterface.IOAuthClient
 	googleConfig *oauth2.Config
 	yandexConfig *oauth2.Config
 }
 
-func New(cfg *config.Config, repo repository.IRepository) *OAuthService {
+func New(cfg *config.Config, repo repository.IRepository, oauthClient apiInterface.IOAuthClient) *OAuthService {
 	var googleConfig = &oauth2.Config{
 		RedirectURL:  cfg.Google.CallbackURL,
 		ClientID:     cfg.Google.ClientID,
@@ -41,7 +42,13 @@ func New(cfg *config.Config, repo repository.IRepository) *OAuthService {
 		Scopes:       []string{"login:email"},
 		Endpoint:     yandex.Endpoint,
 	}
-	return &OAuthService{cfg: cfg, repo: repo, googleConfig: googleConfig, yandexConfig: yandexConfig}
+	return &OAuthService{
+		cfg:          cfg,
+		repo:         repo,
+		googleConfig: googleConfig,
+		yandexConfig: yandexConfig,
+		oauthClient:  oauthClient,
+	}
 }
 
 func (s *OAuthService) GetRedirectURLAndState(ctx context.Context, authProvider string) (url, state string, err error) {
@@ -104,20 +111,16 @@ func (s *OAuthService) getUserEmailFromOauthProvider(ctx context.Context, authPr
 }
 
 func (s *OAuthService) getUserData(ctx context.Context, code string, providerConfig *oauth2.Config, userInfoUrl string) ([]byte, error) {
-	token, err := providerConfig.Exchange(ctx, code)
+	token, err := s.oauthClient.Exchange(ctx, code, providerConfig)
 	if err != nil {
 		return nil, fmt.Errorf("code exchange failed: %w", err)
 	}
 
-	client := resty.New()
-	response, err := client.R().
-		SetContext(ctx).
-		Get(userInfoUrl + token.AccessToken)
-
+	body, err := s.oauthClient.GetUserInfo(ctx, userInfoUrl, token.AccessToken)
 	if err != nil {
 		return nil, fmt.Errorf("failed getting user info: %w", err)
 	}
-	return response.Body(), nil
+	return body, nil
 }
 
 func (s *OAuthService) HandleCallbackAndLoginUser(
