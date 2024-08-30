@@ -106,6 +106,11 @@ func (ctrl *AuthController) Register(c *gin.Context) {
 
 	err = ctrl.authService.FirstRegistrationPhase(ctx, request.Email, request.Password)
 	if err != nil {
+		if errors.Is(err, service.ErrUserAlreadyExists) {
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "user already exists"})
+			return
+		}
+
 		slog.Error("error in AuthController.Register", slog.Any("error", err))
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "something went wrong"})
 		return
