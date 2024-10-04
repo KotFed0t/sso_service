@@ -6,9 +6,12 @@ services:
       context: .
       dockerfile: Dockerfile.dev
     ports:
-      - "80:80"
+      - "8082:80"
     volumes:
       - .:/usr/src/app
+    networks:
+      - kafka_cluster_network
+      - sso_service_network
 
   postgres:
     image: postgres:alpine
@@ -17,9 +20,17 @@ services:
       - POSTGRES_PASSWORD=${PG_PASSWORD}
       - POSTGRES_DB=${PG_DB_NAME}
     ports:
-      - "5432:5432"
+      - "6432:5432"
     volumes:
       - postgres-db:/var/lib/postgresql/data
+    networks:
+      - sso_service_network
 
 volumes:
   postgres-db:
+
+networks:
+  kafka_cluster_network:
+    external: true
+  sso_service_network:
+    driver: bridge

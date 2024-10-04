@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"sso_service/config"
 	"sso_service/data/db/postgres"
+	"sso_service/data/queue/kafka/notificationProducer"
 	"sso_service/internal/externalApi/oauthClient"
 	"sso_service/internal/httpserver"
 	"sso_service/internal/repository"
@@ -44,7 +45,10 @@ func main() {
 	postgresRepo := repository.NewPostgresRepo(postgresDb)
 
 	oauthSrv := oauthService.New(cfg, postgresRepo, &oauthClient.OauthClient{})
-	authSrv := authService.New(cfg, postgresRepo)
+
+	notifProducer := notificationProducer.New(cfg.KafkaNotification.Url, cfg.KafkaNotification.Topic)
+
+	authSrv := authService.New(cfg, postgresRepo, notifProducer)
 	authController := controllers.NewAuthController(cfg, oauthSrv, authSrv)
 
 	engine := gin.Default()
@@ -59,12 +63,22 @@ func main() {
 	case s := <-interrupt:
 		slog.Info("got interruption signal: " + s.String())
 	case err := <-httpServer.Notify():
-		slog.Error("got httpServer.Notify", slog.String("err", err.Error()))
+		slog.Error("got httpServer.Notify", slog.Any("err", err))
 	}
 
 	// Shutdown
 	err := httpServer.Shutdown()
 	if err != nil {
-		slog.Error("httpServer.Shutdown error", slog.String("err", err.Error()))
+		slog.Error("httpServer.Shutdown error", slog.Any("err", err))
+	}
+
+	err = notifProducer.Close()
+	if err != nil {
+		slog.Error("notifProducer.Close error", slog.Any("err", err))
+	}
+
+	err = postgresDb.Close()
+	if err != nil {
+		slog.Error("postgresDb.Close error", slog.Any("err", err))
 	}
 }

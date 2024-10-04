@@ -8,19 +8,27 @@ import (
 	"log/slog"
 	"math/rand"
 	"sso_service/config"
+	"sso_service/data/queue/kafka/notificationProducer"
+	"sso_service/internal/model"
 	"sso_service/internal/repository"
 	"sso_service/internal/service"
 	"sso_service/internal/utils"
+	"strconv"
 	"time"
 )
 
 type AuthService struct {
-	cfg  *config.Config
-	repo repository.IRepository
+	cfg           *config.Config
+	repo          repository.IRepository
+	notifProducer notificationProducer.INotificationProducer
 }
 
-func New(cfg *config.Config, repo repository.IRepository) *AuthService {
-	return &AuthService{cfg: cfg, repo: repo}
+func New(
+	cfg *config.Config,
+	repo repository.IRepository,
+	notifProducer notificationProducer.INotificationProducer,
+) *AuthService {
+	return &AuthService{cfg: cfg, repo: repo, notifProducer: notifProducer}
 }
 
 func (s *AuthService) FirstRegistrationPhase(ctx context.Context, email, password string) error {
@@ -44,8 +52,16 @@ func (s *AuthService) FirstRegistrationPhase(ctx context.Context, email, passwor
 		return fmt.Errorf("failed on UpsertPendingUser: %w", err)
 	}
 
+	go s.notifProducer.Send(context.Background(), email, model.NotificationMessage{
+		Email:        email,
+		Subject:      s.cfg.SubjectEmailConfirmation,
+		TemplateName: s.cfg.TemplateNameEmailConfirmation,
+		Parameters: map[string]string{
+			"Code": strconv.Itoa(code),
+		},
+	})
+
 	return nil
-	// TODO код отправляем на email
 }
 
 func (s *AuthService) genCode() int {
@@ -202,8 +218,17 @@ func (s *AuthService) SendResetPasswordLink(ctx context.Context, email string) e
 
 	resetPasswordUrl := fmt.Sprintf("%s?token=%s&uuid=%s", s.cfg.ResetPasswordUrl, token, user.Uuid)
 	slog.Info("", "resetPasswordUrl", resetPasswordUrl)
+
+	go s.notifProducer.Send(context.Background(), email, model.NotificationMessage{
+		Email:        email,
+		Subject:      s.cfg.SubjectResetPassword,
+		TemplateName: s.cfg.TemplateNameResetPassword,
+		Parameters: map[string]string{
+			"Link": resetPasswordUrl,
+		},
+	})
+
 	return nil
-	// TODO отправить email клиенту со ссылкой
 }
 
 func (s *AuthService) getRandomTokenString(length int) string {

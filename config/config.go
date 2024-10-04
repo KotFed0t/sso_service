@@ -8,16 +8,21 @@ import (
 )
 
 type Config struct {
-	Env              string        `env:"ENV"`
-	LogLevel         string        `env:"LOG_LEVEL"`
-	AuthProviders    []string      `env:"AUTH_PROVIDERS"`
-	ApiTimeout       time.Duration `env:"API_TIMEOUT"`
-	ResetPasswordUrl string        `env:"RESET_PASSWORD_URL"`
-	Postgres         Postgres
-	HttpServer       HttpServer
-	Google           Google
-	Yandex           Yandex
-	Jwt              Jwt
+	Env                           string        `env:"ENV"`
+	LogLevel                      string        `env:"LOG_LEVEL"`
+	AuthProviders                 []string      `env:"AUTH_PROVIDERS"`
+	ApiTimeout                    time.Duration `env:"API_TIMEOUT"`
+	ResetPasswordUrl              string        `env:"RESET_PASSWORD_URL"`
+	Postgres                      Postgres
+	HttpServer                    HttpServer
+	Google                        Google
+	Yandex                        Yandex
+	Jwt                           Jwt
+	KafkaNotification             KafkaNotification
+	TemplateNameResetPassword     string `env:"TEMPLATE_NAME_RESET_PASSWORD"`
+	TemplateNameEmailConfirmation string `env:"TEMPLATE_NAME_EMAIL_CONFIRMATION"`
+	SubjectEmailConfirmation      string `env:"SUBJECT_EMAIL_CONFIRMATION"`
+	SubjectResetPassword          string `env:"SUBJECT_RESET_PASSWORD"`
 }
 
 type Postgres struct {
@@ -58,6 +63,11 @@ type Jwt struct {
 	SecretKey       string        `env:"JWT_SECRET_KEY"`
 	AccessTokenTtl  time.Duration `env:"JWT_ACCESS_TOKEN_TTL"`
 	RefreshTokenTtl time.Duration `env:"JWT_REFRESH_TOKEN_TTL"`
+}
+
+type KafkaNotification struct {
+	Url   []string `env:"KAFKA_NOTIFICATION_URL"`
+	Topic string   `env:"KAFKA_NOTIFICATION_TOPIC"`
 }
 
 func MustLoad() *Config {
