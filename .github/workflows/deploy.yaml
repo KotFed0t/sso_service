@@ -1,0 +1,71 @@
+name: Deploy App
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to deploy'
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      DEPLOY_DIRECTORY: /opt/docker_projects/sso_service
+      MIGRATIONS_DIRECTORY: /opt/docker_projects/sso_service/migrations
+      ENV_FILE_PATH: /opt/docker_projects/sso_service/.env
+      EXAMPLE_ENV_FILE_PATH: /opt/docker_projects/sso_service/example.env
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.inputs.tag }}
+      - name: Check if tag exists
+        run: |
+          git fetch --all --tags
+          if ! git tag | grep -q "^${{ github.event.inputs.tag }}$"; then
+            echo "error: Tag '${{ github.event.inputs.tag }}' not found"
+            exit 1
+          fi
+      - name: Run tests
+        run: |
+          make run-tests
+      - name: Transfer code to server
+        run: |
+          sudo apt-get install -y ssh rsync
+          echo "$DEPLOY_SSH_KEY" > deploy_key.pem
+          chmod 600 deploy_key.pem
+          ssh -i deploy_key.pem -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "mkdir -p ${{ env.DEPLOY_DIRECTORY }}"
+          rsync -avz -e 'ssh -i deploy_key.pem -o StrictHostKeyChecking=no' --exclude='.git' ./ ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }}:${{ env.DEPLOY_DIRECTORY }}
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+      - name: Create env file on server
+        run: |
+          ssh -i deploy_key.pem -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "\
+          rm -f ${{ env.ENV_FILE_PATH }} && \
+          cat ${{ env.EXAMPLE_ENV_FILE_PATH }} | \
+          sed "s|GOOGLE_CLIENT_ID=.*|GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}|" | \
+          sed "s|GOOGLE_CLIENT_SECRET=.*|GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}|" | \
+          sed "s|JWT_SECRET_KEY=.*|JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}|" | \
+          sed "s|PG_DB_NAME=.*|PG_DB_NAME=${{ secrets.PG_DB_NAME }}|" | \
+          sed "s|PG_HOST=.*|PG_HOST=${{ secrets.PG_HOST }}|" | \
+          sed "s|PG_PASSWORD=.*|PG_PASSWORD=${{ secrets.PG_PASSWORD }}|" | \
+          sed "s|PG_PORT=.*|PG_PORT=${{ secrets.PG_PORT }}|" | \
+          sed "s|PG_USER=.*|PG_USER=${{ secrets.PG_USER }}|" | \
+          sed "s|YANDEX_CLIENT_ID=.*|YANDEX_CLIENT_ID=${{ secrets.YANDEX_CLIENT_ID }}|" | \
+          sed "s|YANDEX_CLIENT_SECRET=.*|YANDEX_CLIENT_SECRET=${{ secrets.YANDEX_CLIENT_SECRET }}|" > ${{ env.ENV_FILE_PATH }}"
+      - name: Migrate DB
+        run: |
+          ssh -i deploy_key.pem -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "cd ${{ env.DEPLOY_DIRECTORY }} && docker run -v "${{ env.MIGRATIONS_DIRECTORY }}:/migrations" --network host migrate/migrate -path=/migrations/ -database postgres://${{ secrets.PG_USER }}:${{ secrets.PG_PASSWORD }}@${{ secrets.PG_HOST }}:${{ secrets.PG_PORT }}/${{ secrets.PG_DB_NAME }}?sslmode=disable up"
+      - name: Build dockerfile
+        run: |
+          ssh -i deploy_key.pem -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "\
+          cd ${{ env.DEPLOY_DIRECTORY }} && \
+          echo 'Stopping existing container...' && \
+          (docker stop sso_service && docker rm sso_service) || echo 'No container to stop' && \
+          echo 'Building the new image...' && \
+          docker build -t sso_service . && \
+          echo 'Running the new container...' && \
+          docker run -d -p 8082:80 --name sso_service sso_service && \
+          echo 'Deployment successful'"
