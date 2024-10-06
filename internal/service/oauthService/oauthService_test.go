@@ -37,7 +37,7 @@ func TestGetRedirectURLAndState(t *testing.T) {
 		},
 	}
 
-	cfg := config.MustLoad()
+	cfg := config.MustLoadForTests()
 	repo := mocks.NewIRepository(t)
 	oauthClient := mocks.NewIOAuthClient(t)
 	oauthSrv := New(cfg, repo, oauthClient)
@@ -57,7 +57,7 @@ func TestGetRedirectURLAndState(t *testing.T) {
 }
 
 func TestGetUserEmailFromOauthProvider(t *testing.T) {
-	cfg := config.MustLoad()
+	cfg := config.MustLoadForTests()
 	repo := mocks.NewIRepository(t)
 	oauthClient := mocks.NewIOAuthClient(t)
 	oauthSrv := New(cfg, repo, oauthClient)
@@ -219,7 +219,7 @@ func TestGetOrCreateUser(t *testing.T) {
 		},
 	}
 
-	cfg := config.MustLoad()
+	cfg := config.MustLoadForTests()
 	repo := mocks.NewIRepository(t)
 	oauthClient := mocks.NewIOAuthClient(t)
 	oauthSrv := New(cfg, repo, oauthClient)

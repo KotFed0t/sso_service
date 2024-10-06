@@ -85,3 +85,19 @@ func MustLoad() *Config {
 
 	return cfg
 }
+
+func MustLoadForTests() *Config {
+	// жестко привязываемся к пути /app/.env чтобы в тестах можно было инициализировать конфиг из любой директории.
+	// поэтому во всех docker файлах необходимо указывать workdir /app
+	_ = godotenv.Load("/app/tests.env")
+
+	cfg := &Config{}
+
+	opts := env.Options{RequiredIfNoDef: true}
+
+	if err := env.ParseWithOptions(cfg, opts); err != nil {
+		log.Fatalf("parse config error: %s", err)
+	}
+
+	return cfg
+}

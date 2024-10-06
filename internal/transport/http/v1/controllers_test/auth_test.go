@@ -24,7 +24,7 @@ import (
 
 func TestTest(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	cfg := config.MustLoad()
+	cfg := config.MustLoadForTests()
 	engine := gin.Default()
 	authSrv := mocks.NewIAuthService(t)
 	oauthSrv := mocks.NewIOAuthService(t)
@@ -70,7 +70,7 @@ func TestOauthLogin(t *testing.T) {
 	}
 
 	gin.SetMode(gin.TestMode)
-	cfg := config.MustLoad()
+	cfg := config.MustLoadForTests()
 	engine := gin.Default()
 	authSrv := mocks.NewIAuthService(t)
 	oauthSrv := mocks.NewIOAuthService(t)
@@ -189,7 +189,7 @@ func TestOauthCallback(t *testing.T) {
 	}
 
 	gin.SetMode(gin.TestMode)
-	cfg := config.MustLoad()
+	cfg := config.MustLoadForTests()
 	engine := gin.Default()
 	authSrv := mocks.NewIAuthService(t)
 	oauthSrv := mocks.NewIOAuthService(t)
@@ -266,7 +266,7 @@ func TestFirstRegistrationPhase(t *testing.T) {
 	}
 
 	gin.SetMode(gin.TestMode)
-	cfg := config.MustLoad()
+	cfg := config.MustLoadForTests()
 	engine := gin.Default()
 	authSrv := mocks.NewIAuthService(t)
 	oauthSrv := mocks.NewIOAuthService(t)
@@ -335,7 +335,7 @@ func TestConfirmEmail(t *testing.T) {
 	}
 
 	gin.SetMode(gin.TestMode)
-	cfg := config.MustLoad()
+	cfg := config.MustLoadForTests()
 	engine := gin.Default()
 	authSrv := mocks.NewIAuthService(t)
 	oauthSrv := mocks.NewIOAuthService(t)
@@ -411,7 +411,7 @@ func TestLogin(t *testing.T) {
 	}
 
 	gin.SetMode(gin.TestMode)
-	cfg := config.MustLoad()
+	cfg := config.MustLoadForTests()
 	engine := gin.Default()
 	authSrv := mocks.NewIAuthService(t)
 	oauthSrv := mocks.NewIOAuthService(t)
@@ -486,7 +486,7 @@ func TestRefreshToken(t *testing.T) {
 	}
 
 	gin.SetMode(gin.TestMode)
-	cfg := config.MustLoad()
+	cfg := config.MustLoadForTests()
 	engine := gin.Default()
 	authSrv := mocks.NewIAuthService(t)
 	oauthSrv := mocks.NewIOAuthService(t)
@@ -554,7 +554,7 @@ func TestResetPassword(t *testing.T) {
 	}
 
 	gin.SetMode(gin.TestMode)
-	cfg := config.MustLoad()
+	cfg := config.MustLoadForTests()
 	engine := gin.Default()
 	authSrv := mocks.NewIAuthService(t)
 	oauthSrv := mocks.NewIOAuthService(t)
@@ -634,7 +634,7 @@ func TestLogout(t *testing.T) {
 	}
 
 	gin.SetMode(gin.TestMode)
-	cfg := config.MustLoad()
+	cfg := config.MustLoadForTests()
 	engine := gin.Default()
 	authSrv := mocks.NewIAuthService(t)
 	oauthSrv := mocks.NewIOAuthService(t)
