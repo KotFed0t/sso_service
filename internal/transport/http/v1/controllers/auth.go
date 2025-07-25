@@ -29,8 +29,7 @@ func (ctrl *AuthController) Test(c *gin.Context) {
 }
 
 func (ctrl *AuthController) OauthLogin(c *gin.Context) {
-	ctx, cancel := context.WithTimeout(context.Background(), ctrl.cfg.ApiTimeout)
-	defer cancel()
+	ctx := context.Background()
 
 	authProvider := c.Param("provider")
 	if !slices.Contains(ctrl.cfg.AuthProviders, authProvider) {
@@ -49,8 +48,7 @@ func (ctrl *AuthController) OauthLogin(c *gin.Context) {
 }
 
 func (ctrl *AuthController) OauthCallback(c *gin.Context) {
-	ctx, cancel := context.WithTimeout(context.Background(), ctrl.cfg.ApiTimeout)
-	defer cancel()
+	ctx := context.Background()
 
 	oauthStateCookie, err := c.Cookie("oauthstate")
 	if err != nil {
@@ -89,8 +87,7 @@ func (ctrl *AuthController) OauthCallback(c *gin.Context) {
 }
 
 func (ctrl *AuthController) Register(c *gin.Context) {
-	ctx, cancel := context.WithTimeout(context.Background(), ctrl.cfg.ApiTimeout)
-	defer cancel()
+	ctx := context.Background()
 
 	var request model.RegisterRequest
 	err := c.ShouldBindJSON(&request)
@@ -121,8 +118,7 @@ func (ctrl *AuthController) Register(c *gin.Context) {
 }
 
 func (ctrl *AuthController) ConfirmEmail(c *gin.Context) {
-	ctx, cancel := context.WithTimeout(context.Background(), ctrl.cfg.ApiTimeout)
-	defer cancel()
+	ctx := context.Background()
 
 	var request model.ConfirmEmailRequest
 	err := c.ShouldBindJSON(&request)
@@ -164,8 +160,7 @@ func (ctrl *AuthController) ConfirmEmail(c *gin.Context) {
 }
 
 func (ctrl *AuthController) Login(c *gin.Context) {
-	ctx, cancel := context.WithTimeout(context.Background(), ctrl.cfg.ApiTimeout)
-	defer cancel()
+	ctx := context.Background()
 
 	var request model.LoginRequest
 	err := c.ShouldBindJSON(&request)
@@ -193,8 +188,7 @@ func (ctrl *AuthController) Login(c *gin.Context) {
 }
 
 func (ctrl *AuthController) RefreshTokens(c *gin.Context) {
-	ctx, cancel := context.WithTimeout(context.Background(), ctrl.cfg.ApiTimeout)
-	defer cancel()
+	ctx := context.Background()
 
 	refreshToken, err := c.Cookie("refreshToken")
 	if err != nil {
@@ -218,8 +212,7 @@ func (ctrl *AuthController) RefreshTokens(c *gin.Context) {
 }
 
 func (ctrl *AuthController) SendResetPasswordLink(c *gin.Context) {
-	ctx, cancel := context.WithTimeout(context.Background(), ctrl.cfg.ApiTimeout)
-	defer cancel()
+	ctx := context.Background()
 
 	var request model.ResetPasswordRequest
 	err := c.ShouldBindJSON(&request)
@@ -242,8 +235,7 @@ func (ctrl *AuthController) SendResetPasswordLink(c *gin.Context) {
 }
 
 func (ctrl *AuthController) ResetPassword(c *gin.Context) {
-	ctx, cancel := context.WithTimeout(context.Background(), ctrl.cfg.ApiTimeout)
-	defer cancel()
+	ctx := context.Background()
 
 	var request model.ResetPasswordConfirmation
 	err := c.ShouldBindJSON(&request)
@@ -269,8 +261,7 @@ func (ctrl *AuthController) ResetPassword(c *gin.Context) {
 }
 
 func (ctrl *AuthController) Logout(c *gin.Context) {
-	ctx, cancel := context.WithTimeout(context.Background(), ctrl.cfg.ApiTimeout)
-	defer cancel()
+	ctx := context.Background()
 
 	refreshToken, err := c.Cookie("refreshToken")
 	if err != nil {
