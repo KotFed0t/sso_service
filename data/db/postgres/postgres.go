@@ -3,7 +3,7 @@ package postgres
 import (
 	"fmt"
 	"log/slog"
-	"sso_service/config"
+	"github.com/KotFed0t/sso_service/config"
 	"time"
 
 	_ "github.com/jackc/pgx/stdlib" // pgx driver

@@ -1,21 +1,24 @@
 package main
 
 import (
-	"github.com/gin-gonic/gin"
 	"log/slog"
 	"os"
 	"os/signal"
-	"sso_service/config"
-	"sso_service/data/db/postgres"
-	"sso_service/data/queue/kafka/notificationProducer"
-	"sso_service/internal/externalApi/oauthClient"
-	"sso_service/internal/httpserver"
-	"sso_service/internal/repository"
-	"sso_service/internal/service/authService"
-	"sso_service/internal/service/oauthService"
-	"sso_service/internal/transport/http/v1/controllers"
-	"sso_service/internal/transport/http/v1/routes"
 	"syscall"
+
+	"github.com/KotFed0t/sso_service/config"
+	"github.com/KotFed0t/sso_service/data/db/postgres"
+	"github.com/KotFed0t/sso_service/data/queue/kafka/notificationProducer"
+	"github.com/KotFed0t/sso_service/internal/externalApi/oauthClient"
+	"github.com/KotFed0t/sso_service/internal/grpcserver"
+	"github.com/KotFed0t/sso_service/internal/httpserver"
+	"github.com/KotFed0t/sso_service/internal/repository"
+	"github.com/KotFed0t/sso_service/internal/service/authService"
+	"github.com/KotFed0t/sso_service/internal/service/oauthService"
+	v1 "github.com/KotFed0t/sso_service/internal/transport/grpc/v1"
+	"github.com/KotFed0t/sso_service/internal/transport/http/v1/controllers"
+	"github.com/KotFed0t/sso_service/internal/transport/http/v1/routes"
+	"github.com/gin-gonic/gin"
 )
 
 func main() {
@@ -55,6 +58,10 @@ func main() {
 	routes.SetupRoutes(engine, cfg, authController)
 	httpServer := httpserver.New(engine, cfg)
 
+	grpcController := v1.NewGRPCController(cfg, authSrv)
+	grpcServer := grpcserver.NewGRPCServer(cfg, grpcController)
+	grpcServer.Start()
+
 	// Waiting interruption signal
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
@@ -64,6 +71,8 @@ func main() {
 		slog.Info("got interruption signal: " + s.String())
 	case err := <-httpServer.Notify():
 		slog.Error("got httpServer.Notify", slog.Any("err", err))
+	case err := <-grpcServer.Notify():
+		slog.Error("got grpcServer.Notify", slog.Any("err", err))
 	}
 
 	// Shutdown
@@ -71,6 +80,8 @@ func main() {
 	if err != nil {
 		slog.Error("httpServer.Shutdown error", slog.Any("err", err))
 	}
+
+	grpcServer.Shutdown()
 
 	err = notifProducer.Close()
 	if err != nil {

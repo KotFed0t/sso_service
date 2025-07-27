@@ -7,6 +7,7 @@ services:
       dockerfile: Dockerfile.dev
     ports:
       - "8082:80"
+      - "5051:5051"
     volumes:
       - .:/usr/src/app
     networks:

@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"github.com/segmentio/kafka-go"
 	"log/slog"
-	"sso_service/internal/model"
+	"github.com/KotFed0t/sso_service/internal/model"
 )
 
 type NotificationProducer struct {

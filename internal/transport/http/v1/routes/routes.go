@@ -1,9 +1,9 @@
 package routes
 
 import (
-	"sso_service/config"
-	"sso_service/internal/transport/http/v1/controllers"
-	"sso_service/pkg/middleware"
+	"github.com/KotFed0t/sso_service/config"
+	"github.com/KotFed0t/sso_service/internal/transport/http/v1/controllers"
+	"github.com/KotFed0t/sso_service/pkg/middleware"
 )
 import "github.com/gin-gonic/gin"
 

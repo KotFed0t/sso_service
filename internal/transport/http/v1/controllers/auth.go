@@ -7,11 +7,11 @@ import (
 	"log/slog"
 	"net/http"
 	"slices"
-	"sso_service/config"
-	"sso_service/internal/model"
-	"sso_service/internal/service"
-	"sso_service/internal/service/serviceInterface"
-	"sso_service/internal/utils"
+	"github.com/KotFed0t/sso_service/config"
+	"github.com/KotFed0t/sso_service/internal/model"
+	"github.com/KotFed0t/sso_service/internal/service"
+	"github.com/KotFed0t/sso_service/internal/service/serviceInterface"
+	"github.com/KotFed0t/sso_service/internal/utils"
 )
 
 type AuthController struct {

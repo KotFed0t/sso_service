@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"github.com/jmoiron/sqlx"
-	"sso_service/internal/model"
+	"github.com/KotFed0t/sso_service/internal/model"
 	"time"
 )
 

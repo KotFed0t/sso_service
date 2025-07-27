@@ -11,11 +11,11 @@ import (
 	"golang.org/x/oauth2/google"
 	"golang.org/x/oauth2/yandex"
 	"slices"
-	"sso_service/config"
-	"sso_service/internal/externalApi/apiInterface"
-	"sso_service/internal/model"
-	"sso_service/internal/repository"
-	"sso_service/internal/utils"
+	"github.com/KotFed0t/sso_service/config"
+	"github.com/KotFed0t/sso_service/internal/externalApi/apiInterface"
+	"github.com/KotFed0t/sso_service/internal/model"
+	"github.com/KotFed0t/sso_service/internal/repository"
+	"github.com/KotFed0t/sso_service/internal/utils"
 )
 
 type OAuthService struct {

@@ -13,16 +13,17 @@ type Config struct {
 	AuthProviders                 []string      `env:"AUTH_PROVIDERS"`
 	ApiTimeout                    time.Duration `env:"API_TIMEOUT"`
 	ResetPasswordUrl              string        `env:"RESET_PASSWORD_URL"`
+	TemplateNameResetPassword     string        `env:"TEMPLATE_NAME_RESET_PASSWORD"`
+	TemplateNameEmailConfirmation string        `env:"TEMPLATE_NAME_EMAIL_CONFIRMATION"`
+	SubjectEmailConfirmation      string        `env:"SUBJECT_EMAIL_CONFIRMATION"`
+	SubjectResetPassword          string        `env:"SUBJECT_RESET_PASSWORD"`
 	Postgres                      Postgres
 	HttpServer                    HttpServer
 	Google                        Google
 	Yandex                        Yandex
 	Jwt                           Jwt
 	KafkaNotification             KafkaNotification
-	TemplateNameResetPassword     string `env:"TEMPLATE_NAME_RESET_PASSWORD"`
-	TemplateNameEmailConfirmation string `env:"TEMPLATE_NAME_EMAIL_CONFIRMATION"`
-	SubjectEmailConfirmation      string `env:"SUBJECT_EMAIL_CONFIRMATION"`
-	SubjectResetPassword          string `env:"SUBJECT_RESET_PASSWORD"`
+	GRPCServer                    GRPCServer
 }
 
 type Postgres struct {
@@ -68,6 +69,10 @@ type Jwt struct {
 type KafkaNotification struct {
 	Url   []string `env:"KAFKA_NOTIFICATION_URL"`
 	Topic string   `env:"KAFKA_NOTIFICATION_TOPIC"`
+}
+
+type GRPCServer struct {
+	Address string `env:"GRPC_SERVER_ADDRESS"`
 }
 
 func MustLoad() *Config {

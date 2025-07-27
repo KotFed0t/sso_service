@@ -4,7 +4,7 @@ package mocks
 
 import (
 	context "context"
-	model "sso_service/internal/model"
+	model "github.com/KotFed0t/sso_service/internal/model"
 
 	mock "github.com/stretchr/testify/mock"
 

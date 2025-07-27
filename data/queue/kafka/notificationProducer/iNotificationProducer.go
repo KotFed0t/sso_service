@@ -2,7 +2,7 @@ package notificationProducer
 
 import (
 	"context"
-	"sso_service/internal/model"
+	"github.com/KotFed0t/sso_service/internal/model"
 )
 
 type INotificationProducer interface {
